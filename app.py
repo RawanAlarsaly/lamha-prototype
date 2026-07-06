@@ -228,26 +228,42 @@ if uploaded_file is not None:
                                  hole=0.5, color_discrete_sequence=['#ff3b30', '#a31d1d', '#1f293d', '#4a5568'], template="plotly_dark")
                 st.plotly_chart(fig_pie, use_container_width=True)
 
-    # Tab 3: AI Agent Core
+    
+   # Tab 3: AI Agent Core (Optimized for Big Data)
     with tab3:
         st.subheader(current_str['ai_title'])
         st.markdown(f"<p>{current_str['ai_subtitle']}</p>", unsafe_allow_html=True)
         
-        data_context = cleaned_df.to_string(index=False)
+        # 🧠 هندسة البيانات الضخمة: تلخيص الـ 10,500 سطر في أسطر معدودة ذكية قبل إرسالها للـ AI
+        if {'platform', 'target_audience', 'spent_usd', 'clicks', 'impressions', 'engagement_rate'}.issubset(cleaned_df.columns):
+            summary_df = cleaned_df.groupby(['platform', 'target_audience']).agg({
+                'spent_usd': 'sum',
+                'clicks': 'sum',
+                'impressions': 'sum',
+                'engagement_rate': 'mean'
+            }).reset_index()
+            
+            # حساب الـ CTR للمجموعات ملخصة
+            summary_df['ctr'] = (summary_df['clicks'] / summary_df['impressions'] * 100).round(2)
+            # تحويل الجدول الملخص الصغير جداً إلى سياق للذكاء الاصطناعي (يستهلك 1,000 توكن فقط بدلاً من 400,000!)
+            data_context = summary_df.to_string(index=False)
+        else:
+            data_context = cleaned_df.head(50).to_string(index=False) # Fallback لأول 50 سطر فقط إذا لم تتوفر الأعمدة
+        
         user_query = st.text_input(current_str['input_label'], placeholder=current_str['input_placeholder'])
         
         if user_query:
             system_prompt = f"""
             You are the elite digital marketing AI consultant for the "Lamha" (لمحة) interactive advertising platform.
-            Your goal is to analyze the user's cleaned data and provide strategic, data-backed advice strictly in Arabic.
+            Your goal is to analyze the aggregated corporate data provided and deliver strategic, data-backed advice strictly in Arabic.
             
             Strict Guidelines:
             1. Respond in professional corporate Arabic.
-            2. {current_str['system_gender_prompt']} DO NOT address the user as female specifically. Use general business terminology (e.g., 'عملائنا الأعزاء', 'يمكنكم ملاحظة', 'نوصي بـ').
+            2. {current_str['system_gender_prompt']} DO NOT address the user as female specifically. Use general business terminology.
             3. Use bullet points and professional marketing terms.
             4. Structure your response into: Dashboard Insights, Discovered Issues, and Strategic Recommendations.
             
-            Data Set:
+            Aggregated Data Summary (Platform & Audience Performance):
             {data_context}
             
             User Query: {user_query}
@@ -260,4 +276,5 @@ if uploaded_file is not None:
                     response = model.generate_content(system_prompt)
                     message_placeholder.markdown(response.text)
                 except Exception as e:
+                    st.error(f"Error: {e}")
                     st.error(f"Error: {e}")
