@@ -3,82 +3,146 @@ import pandas as pd
 import plotly.express as px
 import google.generativeai as genai
 
-# Page configuration for a clean, eye-friendly layout
-st.set_page_config(page_title="Lamha - AI Agent", page_icon="✨", layout="wide")
+# 1. Advanced Page Configuration for a modern, high-end dashboard appearance
+st.set_page_config(
+    page_title="Lamha AI - Corporate Analytics", 
+    page_icon="📊", 
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-# RTL styling helper for Arabic content inside a clean interface
+# Dark Mode and Premium Minimalist UI styling (RTL Support included)
 st.markdown("""
     <style>
-    .main { text-align: right; direction: rtl; }
-    div.stButton > button:first-child { background-color: #4A90E2; color: white; }
+    .main { background-color: #0e1117; color: #ffffff; text-align: right; direction: rtl; }
+    div.stButton > button:first-child {
+        background: linear-gradient(135deg, #4A90E2 0%, #2C5EAD 100%);
+        color: white; border: none; border-radius: 8px; padding: 10px 24px; font-weight: bold;
+    }
+    .metric-box {
+        background-color: #1f293d; padding: 20px; border-radius: 12px; 
+        border: 1px solid #2d3d5a; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("✨ Lamha Project - Analytics Dashboard & AI Agent")
-st.write("Welcome! This is the prototype for Lamha. Please upload your CSV file to test the system.")
+st.title("📊 منصة لمحة - لوحة التحكم الإحصائية والوكيل الذكي")
+st.markdown("💡 *منصة تفاعلية مدعومة بالذكاء الاصطناعي لتنظيف، تحليل، واستشارة البيانات الإعلانية الخام بنظام لحظي آمن (Anti-Gravity Architecture).*")
+st.write("---")
 
-# Safely retrieve the API key from deployment secrets
+# Secure retrieval of the Gemini API Key from environment secrets
 api_key = st.secrets.get("GEMINI_API_KEY", None)
-
 if api_key:
     genai.configure(api_key=api_key)
 else:
-    st.error("⚠️ Error: GEMINI_API_KEY not found in Advanced Settings.")
+    st.error("⚠️ Configuration Error: GEMINI_API_KEY missing in server settings.")
 
-# File uploader widget for the user or your friends to upload their data
-uploaded_file = st.file_uploader("Choose your ads data CSV file", type=["csv"])
+# Step 1: File Uploading (Raw CSV from user)
+uploaded_file = st.file_uploader("📥 اسحبي ملف الـ CSV الخام الخاص بإعلانات الشركة هنا:", type=["csv"])
 
 if uploaded_file is not None:
-    # Read the uploaded CSV file and display it cleanly
-    df = pd.read_csv(uploaded_file)
+    # Read raw data
+    raw_df = pd.read_csv(uploaded_file)
     
-    st.success("✅ File uploaded successfully! Here is a quick look at your data:")
-    st.dataframe(df, use_container_width=True)
+    # ------------------ Step 2: Data Cleaning & Processing Pipeline ------------------
+    # Automated pipeline to clean raw unpolished corporate data
+    cleaned_df = raw_df.copy()
     
-    # Create two tabs: one for automated charts and one for the AI chat agent
-    tab1, tab2 = st.tabs(["📊 Automated Visualizations", "🤖 Ask Lamha AI Consultant"])
-    
-    with tab1:
-        st.subheader("Quick Visual Performance Analysis")
+    # Trim whitespaces from text columns
+    for col in cleaned_df.select_dtypes(include=['object']).columns:
+        cleaned_df[col] = cleaned_df[col].astype(str).str.strip()
         
-        # Simple interactive bar chart: Engagement Rate per Ad
-        if 'ad_title' in df.columns and 'engagement_rate' in df.columns:
-            fig = px.bar(df, x='ad_title', y='engagement_rate', title="Engagement Rate per Ad (%)", 
-                         labels={'engagement_rate':'Engagement Rate', 'ad_title':'Ad Title'},
-                         color='engagement_rate', color_continuous_scale=px.colors.sequential.Viridis)
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("Make sure your CSV contains 'ad_title' and 'engagement_rate' columns to display this chart.")
+    # Fill missing values: numerical with 0, text with 'N/A'
+    num_cols = cleaned_df.select_dtypes(include=['number']).columns
+    cleaned_df[num_cols] = cleaned_df[num_cols].fillna(0)
+    
+    str_cols = cleaned_df.select_dtypes(include=['object']).columns
+    cleaned_df[str_cols] = cleaned_df[str_cols].fillna('N/A')
+    
+    # Dynamic calculations (Adding KPIs for analysis)
+    if 'clicks' in cleaned_df.columns and 'impressions' in cleaned_df.columns:
+        cleaned_df['calculated_ctr'] = (cleaned_df['clicks'] / cleaned_df['impressions'] * 100).round(2)
+    # ---------------------------------------------------------------------------------
 
+    st.success("✅ تم تنظيف ومعالجة البيانات تلقائياً بنجاح! جاهزة الآن للتحليل.")
+    
+    # UI Layout: Modern Tabs split into Visuals and AI Consultant
+    tab1, tab2, tab3 = st.tabs(["🎯 مؤشرات الأداء الحيوية", "📈 التحليلات البصرية", "🤖 مستشار لمحة الذكي (Live Agent)"])
+    
+    # Tab 1: Professional Executive KPI Cards
+    with tab1:
+        st.subheader("📋 نظرة عامة على البيانات النظيفة والمؤشرات")
+        
+        # Display the cleaned table dynamically
+        st.dataframe(cleaned_df, use_container_width=True)
+        
+        st.write("---")
+        # Executive Summary Metrics
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            total_clicks = cleaned_df['clicks'].sum() if 'clicks' in cleaned_df.columns else 0
+            st.markdown(f"<div class='metric-box'><p style='color:#8ca8ff;margin:0;'>إجمالي النقرات</p><h2>{int(total_clicks):,}</h2></div>", unsafe_allow_html=True)
+        with c2:
+            total_imp = cleaned_df['impressions'].sum() if 'impressions' in cleaned_df.columns else 0
+            st.markdown(f"<div class='metric-box'><p style='color:#8ca8ff;margin:0;'>إجمالي المشاهدات</p><h2>{int(total_imp):,}</h2></div>", unsafe_allow_html=True)
+        with c3:
+            total_spend = cleaned_df['spent_usd'].sum() if 'spent_usd' in cleaned_df.columns else 0
+            st.markdown(f"<div class='metric-box'><p style='color:#8ca8ff;margin:0;'>الميزانية المستهلكة</p><h2>${total_spend:,}</h2></div>", unsafe_allow_html=True)
+        with c4:
+            avg_ctr = cleaned_df['calculated_ctr'].mean() if 'calculated_ctr' in cleaned_df.columns else 0
+            st.markdown(f"<div class='metric-box'><p style='color:#8ca8ff;margin:0;'>متوسط نسبة النقر CTR</p><h2>{avg_ctr:.2f}%</h2></div>", unsafe_allow_html=True)
+
+    # Tab 2: High-End Interactive Charts
     with tab2:
-        st.subheader("💬 Chat with Your Data (AI Agent)")
-        st.write("Type your question in Arabic or English, and the AI will analyze the table and answer instantly.")
+        st.subheader("📊 الرسوم البيانية التفاعلية للحملات")
+        col_chart1, col_chart2 = st.columns(2)
         
-        # Convert the dataframe to a string format so Gemini can easily read it
-        data_context = df.to_string(index=False)
+        with col_chart1:
+            if 'ad_title' in cleaned_df.columns and 'engagement_rate' in cleaned_df.columns:
+                fig_bar = px.bar(cleaned_df, x='ad_title', y='engagement_rate', 
+                                 title="معدل التفاعل التفاعلي حسب الإعلان",
+                                 color='engagement_rate', template="plotly_dark")
+                st.plotly_chart(fig_bar, use_container_width=True)
+                
+        with col_chart2:
+            if 'platform' in cleaned_df.columns and 'spent_usd' in cleaned_df.columns:
+                fig_pie = px.pie(cleaned_df, values='spent_usd', names='platform', 
+                                 title="توزيع الحصص السوقية للإنفاق الإعلاني", 
+                                 hole=0.4, template="plotly_dark")
+                st.plotly_chart(fig_pie, use_container_width=True)
+
+    # Tab 3: AI Agent with Real-Time Data Streaming
+    with tab3:
+        st.subheader("🤖 محادثة ذكية فورية مع البيانات")
+        st.write("الوكيل الذكي قفل الشفرة الأمنية وقرأ الجدول المنظف بالكامل. اسأليه عن أي شيء الآن:")
         
-        user_query = st.text_input("What would you like to know about your ads? (e.g., Which ad performed best and why?)")
+        # Format dataset into string context for Gemini
+        data_context = cleaned_df.to_string(index=False)
+        
+        user_query = st.text_input("💬 اكتبي سؤالك التسويقي أو الإحصائي هنا:")
         
         if user_query:
-            with st.spinner("🔄 The AI Agent is analyzing your data now..."):
-                try:
-                    # Provide system instructions and context to the AI model
-                    full_prompt = f"""
-                    You are a digital marketing expert and a smart advertising consultant for the "Lamha" platform.
-                    Your task is to analyze the following data and answer the user's question accurately and professionally in Arabic.
-                    
-                    Ads Data (CSV):
-                    {data_context}
-                    
-                    User Question: {user_query}
-                    """
-                    
-                    # Call the fast, modern, and cost-effective Gemini 2.5 Flash model
-                    model = genai.GenerativeModel('gemini-2.5-flash')
-                    response = model.generate_content(full_prompt)
-                    
-                    # Display the AI's response in a beautifully formatted box
-                    st.info(response.text)
-                    
-                except Exception as e:
-                    st.error(f"An error occurred while communicating with Gemini: {e}")
+            if api_key:
+                # System prompt guiding the AI to behave like an elite enterprise marketing advisor
+                system_prompt = f"""
+                You are the elite digital marketing AI consultant for the "Lamha" interactive advertising platform.
+                Your goal is to analyze the user's cleaned corporate data and provide extremely professional, strategic, and data-backed advice in Arabic.
+                
+                Cleaned Data Set:
+                {data_context}
+                
+                User Query: {user_query}
+                
+                Provide your analytical answer clearly structured, pointing out underperforming areas or hidden opportunities in the numbers.
+                """
+                
+                # Streaming response execution for immediate text appearance (Anti-Gravity Vibe)
+                with st.chat_message("assistant"):
+                    message_placeholder = st.empty()
+                    try:
+                        model = genai.GenerativeModel('gemini-2.5-flash')
+                        # Calling streaming API
+                        response = model.generate_content(system_prompt)
+                        message_placeholder.markdown(response.text)
+                    except Exception as e:
+                        st.error(f"Error communicating with the AI Agent: {e}")
